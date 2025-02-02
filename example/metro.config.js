@@ -1,43 +1,43 @@
-// metro.config.js
-//
-// with multiple workarounds for this issue with symlinks:
-// https://github.com/facebook/metro/issues/1
-//
-// with thanks to @johnryan (<https://github.com/johnryan>)
-// for the pointers to multiple workaround solutions here:
-// https://github.com/facebook/metro/issues/1#issuecomment-541642857
-//
-// see also this discussion:
-// https://github.com/brodybits/create-react-native-module/issues/232
-
-const path = require('path')
+const {getDefaultConfig, mergeConfig} = require('@react-native/metro-config');
+const path = require('path');
+/**
+ * Metro configuration
+ * https://reactnative.dev/docs/metro
+ *
+ * @type {import('metro-config').MetroConfig}
+ */
 
 const watchFolders = [
-  path.resolve(__dirname + "/.."),
-  path.resolve(__dirname + "/"),
+  path.resolve(__dirname + '/..'),
+  path.resolve(__dirname + '/'),
 ];
 
-module.exports = {
-  // workaround for an issue with symlinks encountered starting with
-  // metro@0.55 / React Native 0.61
-  // (not needed with React Native 0.60 / metro@0.54)
+const config = {
   resolver: {
+    nodeModulesPaths: [
+      path.resolve(__dirname, 'node_modules'),
+      path.resolve(__dirname, '..', 'node_modules'),
+    ],
+    // Provide extraNodeModules to handle symlinks in Node.js module resolution
     extraNodeModules: new Proxy(
       {},
-      { get: (_, name) => path.resolve('.', 'node_modules', name) }
-    )
+      {
+        get: (_, name) => path.resolve(__dirname, 'node_modules', name),
+      },
+    ),
   },
 
   transformer: {
     getTransformOptions: async () => ({
       transform: {
-        // this defeats the RCTDeviceEventEmitter is not a registered callable module
+        // Ensures modules load correctly by optimizing requires
         inlineRequires: true,
       },
     }),
   },
 
-  // quick workaround for another issue with symlinks
-  // watchFolders: ['.', '..']
-  watchFolders
-}
+  // Ensure Metro watches both the current directory and parent folder
+  watchFolders,
+};
+
+module.exports = mergeConfig(getDefaultConfig(__dirname), config);
