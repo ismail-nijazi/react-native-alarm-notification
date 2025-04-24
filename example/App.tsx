@@ -9,6 +9,7 @@ import {
   Platform,
   NativeEventEmitter,
   NativeModules,
+  AppState,
 } from 'react-native';
 import ReactNativeAN from 'react-native-alarm-notification';
 
@@ -53,6 +54,22 @@ const App: React.FC = () => {
   const [alarmId, setAlarmId] = useState<string | null>(null);
   const [update, setUpdate] = useState<AlarmUpdate[]>([]);
 
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (nextAppState === 'active') {
+        // 🛑 Stop alarm sound when app becomes active
+        ReactNativeAN.stopAlarmSound();
+
+        // ✅ Optional: Remove any lingering notifications
+        if (Platform.OS === 'android') {
+          ReactNativeAN.removeAllFiredNotifications();
+        }
+      }
+    });
+
+    return () => subscription.remove();
+  }, []);
+
   const subscribeDismiss = useRef<any>();
   const subscribeOpen = useRef<any>();
 
@@ -60,6 +77,9 @@ const App: React.FC = () => {
     const details = {
       ...alarmNotifData,
       fire_date: fireDate,
+      play_sound: true,
+      loop_sound: true,
+      volume: 1.0,
     };
     console.log(`Alarm set: ${fireDate}`);
 
@@ -77,15 +97,17 @@ const App: React.FC = () => {
   };
 
   const setFutureAlarm = async () => {
-    const _seconds = parseInt(futureFireDate, 10) * 60 * 1000;
+    const _seconds = parseInt(futureFireDate, 10) * 15 * 1000;
     const fire_date = ReactNativeAN.parseDate(new Date(Date.now() + _seconds));
 
     const details = {
       ...alarmNotifData,
       fire_date,
-      sound_name: 'iphone_ringtone.mp3',
+      sound_name: '',
+      play_sound: true,
+      loop_sound: true,
+      volume: 1.0,
     };
-    console.log(`Alarm set: ${fire_date}`);
 
     try {
       const alarm = await ReactNativeAN.scheduleAlarm(details);
@@ -104,7 +126,15 @@ const App: React.FC = () => {
     const _seconds = parseInt(futureFireDate, 10) * 60 * 1000;
     const fire_date = ReactNativeAN.parseDate(new Date(Date.now() + _seconds));
 
-    const details = {...repeatAlarmNotifData, fire_date};
+    const details = {
+      ...repeatAlarmNotifData,
+      fire_date,
+      sound_name: 'iphone_ringtone.mp3',
+      volume: 0.9,
+      bypass_dnd: true,
+      play_sound: true,
+      loop_sound: true,
+    };
     console.log(`Alarm set: ${fire_date}`);
 
     try {
